@@ -691,6 +691,58 @@
                 padding: 20px 15px;
             }
         }
+
+             /* **** بداية كود التقييم الجديد (زر التقييم العائم) **** */
+
+        .rating-icon {
+            position: fixed;
+            bottom: 20px;
+            right: 20px; /* الموقع: يمين-أسفل الشاشة */
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); /* لون مميز */
+            color: white;
+            width: 120px;
+            height: 50px;
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 5px 25px rgba(17, 153, 142, 0.5);
+            transition: all 0.3s;
+            z-index: 999;
+            border: 3px solid white;
+        }
+
+        .rating-icon:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 35px rgba(17, 153, 142, 0.7);
+        }
+
+        .star {
+            color: #ddd; /* لون النجمة غير الملونة */
+            transition: color 0.3s;
+            padding: 0 2px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .star.checked {
+            color: #ffc107; /* لون النجمة الملونة (ذهبي) */
+        }
+
+        /* تعديل للموبايل */
+        @media (max-width: 768px) {
+            .rating-icon {
+                width: 100px;
+                height: 45px;
+                font-size: 14px;
+                bottom: 15px;
+                right: 15px;
+            }
+        }
+
+        /* **** نهاية كود التقييم الجديد **** */
     </style>
 </head>
 <body>
@@ -915,6 +967,36 @@
             ℹ️
         </div>
 
+               
+<div id="ratingModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeRatingModal()">&times;</span>
+            <h2>تقييم مسابقة المنتجات</h2>
+            
+            <form id="ratingForm" onsubmit="submitSupabaseRating(event)"> 
+                
+                <div class="form-group" style="text-align: center;">
+                    <label>تقييمك للموقع:</label>
+                    <div id="starsContainer" style="font-size: 30px; margin-top: 10px; cursor: pointer; direction: ltr;">
+                        <span class="star" data-rating="5">★</span>
+                        <span class="star" data-rating="4">★</span>
+                        <span class="star" data-rating="3">★</span>
+                        <span class="star" data-rating="2">★</span>
+                        <span class="star" data-rating="1">★</span>
+                    </div>
+                    <input type="hidden" id="ratingValue" value="5" required>
+                </div>
+
+                <div class="form-group">
+                    <label>ملاحظاتك/مقترحاتك (اختياري)</label>
+                    <textarea id="feedbackText" placeholder="اكتب ملاحظاتك لتحسين الموقع..."></textarea>
+                </div>
+
+                <button type="submit" id="ratingSubmitBtn">إرسال التقييم</button>
+            </form>
+        </div>
+    </div>
+
         <!-- Info Page -->
         <div id="infoPage" class="info-page">
             <div class="info-content">
@@ -994,6 +1076,9 @@
                 </div>
             </div>
         </div>
+    </div>
+    <div id="ratingIcon" class="rating-icon hidden" onclick="openRatingModal()">
+        ⭐ تقييم
     </div>
 
     <script>
@@ -1901,6 +1986,138 @@ async function register() {
                 alert('خطأ في عرض الفائز: ' + error.message);
             }
         }
+
+        
+        // **** بداية كود التقييم الكامل (JavaScript) ****
+
+        const ratingModal = document.getElementById('ratingModal');
+        const ratingValueInput = document.getElementById('ratingValue');
+        const starsContainer = document.getElementById('starsContainer');
+        const ratingIcon = document.getElementById('ratingIcon'); // جلب زر التقييم العائم
+        // جلب النجوم بترتيبها الصحيح (5، 4، 3، 2، 1)
+        const allStars = starsContainer.querySelectorAll('.star');
+
+        // اظهار زر التقييم العائم بعد تسجيل الدخول
+        function showRatingIcon() {
+             if (ratingIcon) {
+                ratingIcon.classList.remove('hidden');
+             }
+        }
+        
+        // يمكنك استدعاء دالة showRatingIcon() داخل دالة updateUI() أو في مكان يتم فيه التأكد من تسجيل الدخول.
+
+        // فتح نافذة التقييم
+        function openRatingModal() {
+            ratingModal.style.display = 'block';
+            // نحدد التقييم الافتراضي 5 نجوم عند الفتح
+            setRating(5);
+        }
+
+        // إغلاق نافذة التقييم
+        function closeRatingModal() {
+            ratingModal.style.display = 'none';
+        }
+
+        // تلوين النجوم بناءً على التقييم
+        function setRating(rating) {
+            // نمسح التلوين من كل النجوم أولاً
+            allStars.forEach(star => {
+                star.classList.remove('checked');
+            });
+
+            // نلون النجوم بالترتيب العكسي (من 1 إلى 5)
+            for (let i = 0; i < rating; i++) {
+                allStars[allStars.length - 1 - i].classList.add('checked');
+            }
+
+            ratingValueInput.value = rating;
+        }
+
+        // إضافة مستمعي الأحداث للنجوم للضغط عليها والتأثيرات
+        allStars.forEach(star => {
+            star.addEventListener('click', function() {
+                const rating = parseInt(this.getAttribute('data-rating'));
+                setRating(rating);
+            });
+            
+            star.addEventListener('mouseover', function() {
+                const rating = parseInt(this.getAttribute('data-rating'));
+                allStars.forEach(s => {
+                    const sRating = parseInt(s.getAttribute('data-rating'));
+                    if (sRating <= rating) {
+                        s.classList.add('checked');
+                    } else {
+                        s.classList.remove('checked');
+                    }
+                });
+            });
+        });
+
+        // استعادة التقييم الحقيقي عند مغادرة منطقة النجوم
+        starsContainer.addEventListener('mouseout', function() {
+            const currentRating = parseInt(ratingValueInput.value);
+            setRating(currentRating);
+        });
+
+
+        // **** دالة الإرسال لـ Supabase (هذه هي أهم دالة) ****
+        async function submitSupabaseRating(event) {
+            event.preventDefault(); // منع الإرسال الافتراضي للصفحة
+
+            const rating = parseInt(document.getElementById('ratingValue').value);
+            const feedback = document.getElementById('feedbackText').value.trim();
+            const submitBtn = document.getElementById('ratingSubmitBtn');
+
+            if (rating < 1 || rating > 5) {
+                alert('الرجاء اختيار تقييم من 1 إلى 5 نجوم.');
+                return;
+            }
+
+            // تعطيل الزر أثناء الإرسال
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'جاري الإرسال...';
+            
+            // محاولة جلب المستخدم المسجل الدخول
+            let userEmail = 'Anonymous';
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    userEmail = user.email;
+                }
+            } catch (e) {
+                console.warn('Could not retrieve user email:', e);
+            }
+            
+            // إرسال البيانات إلى جدول 'ratings'
+            const { error } = await supabase
+                .from('ratings')
+                .insert([
+                    { 
+                        rating_value: rating, 
+                        feedback_text: feedback,
+                        user_email: userEmail
+                    },
+                ]);
+
+            if (error) {
+                console.error('Error inserting rating:', error);
+                alert('عذراً، حدث خطأ أثناء إرسال التقييم. ' + error.message);
+            } else {
+                alert('شكراً لكِ! تم إرسال تقييمكِ بنجاح إلى قاعدة البيانات.');
+                // مسح الحقول وإغلاق النافذة
+                document.getElementById('feedbackText').value = '';
+                closeRatingModal();
+            }
+            
+            // إعادة تفعيل الزر بعد الانتهاء
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'إرسال التقييم';
+        }
+        
+        // **** نهاية كود التقييم الكامل (JavaScript) ****
+
+        // ... الكود المتبقي لـ JavaScript ...
     </script>
 </body>
+
 </html>
